@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#6558d9">
+<title>漢字たんけん！</title>
+<style>
+:root{--purple:#6558d9;--ink:#292548;--line:#e4e0ff;--bg:#f6f4ff;--green:#d9ffef;--gold:#ffe7a3}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(160deg,#e8e4ff,#fbfaff 52%,#fff3f7);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;color:var(--ink)}
+main{max-width:680px;margin:auto;padding:14px 14px 30px}
+header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:4px 0 14px}
+.logo{font-size:22px;font-weight:950}
+.stars{background:white;border-radius:999px;padding:9px 13px;font-weight:900;box-shadow:0 3px 0 var(--line)}
+.hero{background:linear-gradient(135deg,#7668ee,#a28cf5);color:white;padding:18px;border-radius:22px;box-shadow:0 5px 0 #5144b8}
+.hero h1{font-size:26px;margin:0 0 7px}.hero p{margin:0;line-height:1.55;font-size:14px}
+.card{background:white;border:2px solid #eeeaff;border-radius:22px;padding:15px;margin-top:14px;box-shadow:0 4px 0 #e7e2ff}
+label{font-weight:800;display:block;margin-bottom:7px}
+select{font:inherit;font-size:16px;border:2px solid var(--line);border-radius:12px;padding:10px;background:white;color:var(--ink);width:100%}
+.toprow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.prompt{text-align:center;padding:12px 4px 8px}
+.prompt .target{font-size:68px;font-weight:950;line-height:1.2}
+.prompt .reading{font-size:15px;color:#77728f;margin-top:5px}
+.canvas-wrap{position:relative;max-width:430px;margin:10px auto 0}
+#can{display:block;width:100%;height:auto;aspect-ratio:1/1;border:3px solid #c9c0ff;border-radius:16px;background-color:#fff;background-image:linear-gradient(to right,transparent calc(50% - 1px),#e7e2ff calc(50% - 1px),#e7e2ff calc(50% + 1px),transparent calc(50% + 1px)),linear-gradient(to bottom,transparent calc(50% - 1px),#e7e2ff calc(50% - 1px),#e7e2ff calc(50% + 1px),transparent calc(50% + 1px));touch-action:none}
+.helper{text-align:center;color:#7e789a;font-size:13px;margin:8px 0 0}
+.buttons{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+button{font:inherit;font-weight:850;border:0;border-radius:14px;padding:13px 10px;cursor:pointer;touch-action:manipulation}
+.primary{background:var(--purple);color:white;box-shadow:0 4px 0 #4d41b4}.secondary{background:#f1efff;color:var(--purple);border:2px solid #dfd9ff}
+.feedback{margin-top:13px;border-radius:14px;padding:12px;background:#f7f5ff;line-height:1.55;font-weight:750;min-height:48px}
+.feedback.good{background:var(--green);color:#116b4a}.feedback.warn{background:#fff3d4;color:#835b00}
+#candidateList{display:none}
+.resultrow{display:flex;justify-content:space-between;gap:8px;font-weight:800;margin-top:10px;font-size:14px}
+details{margin-top:12px;color:#716c8b;font-size:13px;line-height:1.6}
+details summary{cursor:pointer;font-weight:800}
+footer{text-align:center;font-size:12px;color:#8983a1;padding:18px 4px}
+.hidden{display:none}
+@media(min-width:600px){.playgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}.playgrid .card{margin-top:14px}}
+</style>
+</head>
+<body>
+<main>
+<header><div class="logo">✏️ 漢字たんけん！</div><div class="stars">⭐ <span id="stars">0</span></div></header>
+<section class="hero"><h1>書いて、見つけて、星をゲット！</h1><p>Apple Pencilで漢字を書いてみよう。認識候補にお手本の漢字があれば「できた！」。うまくいかなくても、何度でも挑戦できるよ。</p></section>
+
+<div class="playgrid">
+<section class="card">
+<div class="toprow">
+<div><label for="grade">学年</label><select id="grade"><option value="1">小学1年生</option><option value="2" selected>小学2年生</option><option value="all">1・2年生ぜんぶ</option></select></div>
+<div><label for="mode">出題方法</label><select id="mode"><option value="random">ランダム</option><option value="list">順番に練習</option></select></div>
+</div>
+<div class="prompt"><div class="target" id="target">海</div><div class="reading" id="hint">うみ ／ 画数：9画</div></div>
+<div class="canvas-wrap">
+<canvas id="can" width="320" height="320" data-candidate-list="candidateList" aria-label="漢字を書くエリア"></canvas>
+</div>
+<p class="helper">マスの中に、漢字を大きく書こう</p>
+<div class="buttons"><button class="secondary" id="erase">🧽 ぜんぶ消す</button><button class="secondary" id="undo">↶ 1画もどす</button></div>
+<div class="buttons"><button class="primary" id="check">🔍 できたか判定</button><button class="secondary" id="next">➡️ 次の漢字</button></div>
+<div class="feedback" id="feedback" aria-live="polite">準備できたよ。お手本の漢字を書いて「できたか判定」を押してね。</div>
+<div class="resultrow"><span>この漢字：<span id="count">0</span> 回挑戦</span><span>できた：<span id="wins">0</span></span></div>
+<div id="candidateList"></div>
+</section>
+<section class="card">
+<h2 style="margin:0 0 8px">🧭 きょうのたんけん</h2>
+<p style="font-size:14px;line-height:1.65;margin-top:0">書いた文字を認識して、お手本と同じ漢字が候補に出るかをチェックするよ。書き順をまちがえても認識できる仕組みだけど、書き順そのものを採点する機能ではないよ。</p>
+<div style="background:#fff5d9;border-radius:14px;padding:12px;font-size:13px;line-height:1.6">
+<strong>💡 うまく認識されないとき</strong><br>
+・マスいっぱいに大きく書く<br>
+・線と線のすきまを少しあける<br>
+・ゆっくり、はっきり書く<br>
+・消して、もう一度書いてみる
+</div>
+<details><summary>判定について（保護者向け）</summary>
+このゲームはオープンソースの手書き漢字認識ライブラリを使い、認識候補に正解の漢字が含まれるかを見ています。文字の一致を確認する補助であり、字形の美しさや学校の採点基準に沿った合否を保証するものではありません。認識データの対象外の字や、くずし字、線が重なった字は認識に失敗する場合があります。書き順・画数の厳密な評価はまだ行いません。
+</details>
+<details><summary>このアプリについて</summary>
+手書きの認識処理はブラウザ上のJavaScriptで動く構成です。外部ライブラリの読み込みにはインターネット接続が必要です。星と練習記録はこの端末のブラウザに保存します。Safariの履歴・Webサイトデータを消去すると記録が消える場合があります。
+</details>
+</section>
+</div>
+<footer>漢字たんけん！ · こつこつ練習して、漢字マスターを目指そう 🌱</footer>
+</main>
+<script src="https://cdn.jsdelivr.net/gh/asdfjkl/kanjicanvas@master/docs/resources/javascript/kanji-canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/asdfjkl/kanjicanvas@master/docs/resources/javascript/ref-patterns.js"></script>
+<script>
+const G1="一右雨円王音下火花貝学気九休玉金空月犬見五口校左三山子四糸字耳七車手十出女小上森人水正生青夕石赤千川先早草足村大男竹中虫町天田土二日入年白八百文木本名目立力林六";
+const G2="引羽雲園遠何科夏家歌画回会海絵外角楽活間丸岩顔汽記帰弓牛魚京強教近兄形計元言原戸古午後語工公広交光考行高黄合谷国黒今才細作算止市矢姉思紙寺自時室社弱首秋週春書少場色食心新親図数西声星晴切雪船線前組走多太体台地池知茶昼長鳥朝直通弟店点電刀冬当東答頭同道読内南肉馬売買麦半番父風分聞米歩母方北毎妹万明鳴毛門夜野友用曜来里理話";
+const grade1Meta={}; const grade2Meta={};
+const $=id=>document.getElementById(id);
+let target="", ordered=[], idx=0, attempt=0, wins=0;
+let stars=Number(localStorage.getItem("kanjiAdventureStars")||0);
+let records=JSON.parse(localStorage.getItem("kanjiAdventureRecords")||"{}");
+function chars(){const g=$("grade").value;return g==="1"?[...G1]:g==="2"?[...G2]:[...G1,...G2].filter((v,i,a)=>a.indexOf(v)===i)}
+function countStrokes(ch){return ({一:1,二:2,三:3,十:2,人:2,大:3,口:3,日:4,月:4,木:4,水:4,火:4,山:3,川:3,田:5,目:5,本:5,休:6,花:7,雨:8,学:8,校:10,海:9,時:10,書:10,語:14,読:14})[ch]||"—"}
+function save(){localStorage.setItem("kanjiAdventureStars",stars);localStorage.setItem("kanjiAdventureRecords",JSON.stringify(records));$("stars").textContent=stars}
+function newList(){ordered=chars();if($("mode").value==="random")ordered.sort(()=>Math.random()-.5);idx=0}
+function nextKanji(){
+ const list=chars(); if(!ordered.length||idx>=ordered.length||!list.includes(ordered[idx]))newList();
+ target=ordered[idx];idx++;
+ $("target").textContent=target;
+ const stroke=countStrokes(target);
+ $("hint").textContent=($("grade").value==="1"?"小学1年生":"小学2年生")+"の漢字"+(stroke!=="—"?" ／ 画数："+stroke+"画":"");
+ attempt=records[target]?.attempt||0;wins=records[target]?.wins||0;
+ $("count").textContent=attempt;$("wins").textContent=wins;
+ $("feedback").className="feedback";$("feedback").textContent="お手本の漢字を書いて「できたか判定」を押してね。";
+ if(window.KanjiCanvas){try{KanjiCanvas.erase("can")}catch(e){}}
+}
+function getCandidates(){
+ const node=$("candidateList");
+ let raw="";
+ try{raw=KanjiCanvas.recognize("can")}catch(e){return {error:"認識ライブラリを使えません。通信状況を確認してページを再読み込みしてください。"}}
+ let s=(node.innerText||node.textContent||"")+" "+(typeof raw==="string"?raw:JSON.stringify(raw||""));
+ // Library candidates may render character names or labels. Only match the exact target character.
+ return {text:s,found:s.includes(target)};
+}
+$("check").addEventListener("click",()=>{
+ if(!window.KanjiCanvas){$("feedback").className="feedback warn";$("feedback").textContent="認識機能の読み込みに失敗しました。インターネットに接続してページを再読み込みしてください。";return}
+ const result=getCandidates();
+ if(result.error){$("feedback").className="feedback warn";$("feedback").textContent=result.error;return}
+ attempt++;records[target]=records[target]||{attempt:0,wins:0};records[target].attempt=attempt;
+ if(result.found){
+  records[target].wins=(records[target].wins||0)+1;wins=records[target].wins;stars++;save();
+  $("feedback").className="feedback good";$("feedback").textContent="🎉 できた！ お手本と同じ漢字を認識できたよ。星を1つゲット！";
+ }else{
+  $("feedback").className="feedback warn";$("feedback").textContent="まだ見つからなかったみたい。これは不正解と決まったわけではないよ。大きく、はっきり書いて、もう一度ためそう！";
+ }
+ $("count").textContent=attempt;$("wins").textContent=wins;
+});
+$("erase").addEventListener("click",()=>{if(window.KanjiCanvas)KanjiCanvas.erase("can");$("feedback").className="feedback";$("feedback").textContent="消したよ。もう一度書いてみよう。"});
+$("undo").addEventListener("click",()=>{if(window.KanjiCanvas)KanjiCanvas.deleteLast("can")});
+$("next").addEventListener("click",nextKanji);
+$("grade").addEventListener("change",()=>{newList();nextKanji()});
+$("mode").addEventListener("change",()=>{newList();nextKanji()});
+try { if(window.KanjiCanvas) KanjiCanvas.init("can"); } catch(e) { console.error(e); }
+save();newList();nextKanji();
+</script>
+</body>
+</html>
