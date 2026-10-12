@@ -132,7 +132,22 @@ $("undo").addEventListener("click",()=>{if(window.KanjiCanvas)KanjiCanvas.delete
 $("next").addEventListener("click",nextKanji);
 $("grade").addEventListener("change",()=>{newList();nextKanji()});
 $("mode").addEventListener("change",()=>{newList();nextKanji()});
+// Canvasの表示サイズと内部座標サイズを合わせる。
+// CSSで拡大縮小されていると、ペン先と描画位置がずれることがある。
+function fitCanvasCoordinates(){
+ const canvas=$("can");
+ const rect=canvas.getBoundingClientRect();
+ const css=getComputedStyle(canvas);
+ const borderX=parseFloat(css.borderLeftWidth||0)+parseFloat(css.borderRightWidth||0);
+ const borderY=parseFloat(css.borderTopWidth||0)+parseFloat(css.borderBottomWidth||0);
+ const w=Math.max(1,Math.round(rect.width-borderX));
+ const h=Math.max(1,Math.round(rect.height-borderY));
+ if(canvas.width!==w) canvas.width=w;
+ if(canvas.height!==h) canvas.height=h;
+}
+fitCanvasCoordinates();
 try { if(window.KanjiCanvas) KanjiCanvas.init("can"); } catch(e) { console.error(e); }
+// 画面回転やウインドウサイズ変更後は、再読み込みすると座標が再調整されます。
 save();newList();nextKanji();
 </script>
 </body>
